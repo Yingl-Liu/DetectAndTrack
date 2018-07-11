@@ -1,11 +1,7 @@
 #include "PAOT.h"
 
 #include "Affinity.h"
-<<<<<<< HEAD
-=======
 #include "KalmanPredictor.h"
->>>>>>> 74b29e9cc2feeca0adb7f68ec39cb5623907a4d6
-#include <dlib/optimization.h>
 const std::string currentPath = "../objImage/";
 // Methods
 

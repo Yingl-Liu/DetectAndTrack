@@ -13,7 +13,7 @@ pthread_mutex_t mutexRequest;
 pthread_mutex_t mutexRead;
 const std::string rtsp_211 = "rtsp://admin:admin@12345@192.168.153.211:554/h264/ch1/av_stream";
 const std::string rtmp = "rtmp://192.168.153.117:1935/myapp/test4";
-const std::string videoFile = "/home/nvidia/Videos/test.avi";
+const std::string videoFile = "/home/lyl/video/Jogging.avi";
 const std::string IP = "http://192.168.153.117:8000/";
 std::string cameraNum = "2";
 int threshold = 90;

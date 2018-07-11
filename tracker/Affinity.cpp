@@ -27,7 +27,7 @@ double Affinity::expAndFeaCost(const Detection &a, const Detection &b) {
     double shapeCost = std::exp(-shapeWeight * (
             std::abs(a.bb.width - b.bb.width) / (a.bb.width + b.bb.width) +
             std::abs(a.bb.height - b.bb.height) / (a.bb.height + b.bb.height)));
-    double featureCost = CosDistance(a.feature, b.feature);
+    double featureCost = 1 / (1 + std::exp(12 * (0.7 - CosDistance(a.feature, b.feature))));
     std::cout << "featureCost:" << featureCost << " positionAndShape:" << 100 * positionCost * shapeCost << std::endl;
     return positionCost * shapeCost;
 }
