@@ -2,7 +2,8 @@
 #define CPP_AFFINITY_H
 
 
-#include "../util/BoundingBox.h"
+#include "../util/Detection.h"
+
 
 class Affinity {
 public:
@@ -21,12 +22,12 @@ public:
     static double iou(const BoundingBox &a, const BoundingBox &b);
 
     /**
-     * Combination of linear similarity in position and shape
+     * Combination of exponential similarity in position and shape and HSV histogram feature
      * Small value indicates similarity
      * From: Online multi-target tracking with strong and weak detections
      * (Ricardo Sanchez-Matilla, Fabio Poiesi, Andrea Cavallaro Centre)
      */
-    static double linCost(const BoundingBox &a, const BoundingBox &b);
+    static double expAndFeaCost(const Detection &a, const Detection &b);
 
     /**
      * Combination of exponential similarity in position and shape
@@ -36,11 +37,13 @@ public:
      * @param a BoundingBox from Detection
      * @param b BoundingBox from Predictor
      */
-    static double expCost(const BoundingBox &a, const BoundingBox &b);
+    static double expCost(const Detection &a, const Detection &b);
 
 private:
     // Prevent instantiation
     Affinity() {};
+
+    static double CosDistance(const cv::Mat &feature1, const cv::Mat &feature2);
 };
 
 

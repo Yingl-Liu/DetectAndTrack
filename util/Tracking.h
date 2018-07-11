@@ -7,9 +7,9 @@
 #include <ostream>
 
 struct Tracking {
-    Tracking(int label, int ID, const BoundingBox &bb);
+    Tracking(std::string label, int ID, const BoundingBox &bb);
 
-    Tracking(int label, int ID, const BoundingBox &bb, std::string trackingName);
+    Tracking(std::string label, int ID, const BoundingBox &bb, std::string trackingName);
 
     Tracking(const Tracking &rhs);
 
@@ -20,10 +20,10 @@ struct Tracking {
 
     Tracking &operator=(Tracking &&rhs) = delete;
 
-    const int label;
+    const std::string label;//class "P" or "car"
     const int ID;
     const BoundingBox bb;
-    std::string trackingName;
+    std::string trackingName;//this object name. "car" + "_" + "ID" or "camera id" + "_" + "db_id"
 };
 
 std::ostream &operator<<(std::ostream &os, const Tracking &t);

@@ -4,6 +4,7 @@
 #include <string>
 #include <memory>
 #include <iostream>
+#include <map>
 
 extern "C"{
 #include "darknet.h"
@@ -35,6 +36,8 @@ private:
     const int height;
     const int channel;
     void mat_into_im(const cv::Mat & image);
+    std::map<int, std::string> carLable;//2:car,5:bus,7:truck
+    cv::Rect detectROI;
 };
 
 #endif // YOLODETECTOR_H

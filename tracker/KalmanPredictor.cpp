@@ -2,8 +2,8 @@
 
 // Constructors
 
-KalmanPredictor::KalmanPredictor(const Detection &initialState, int ID)
-        : Predictor(initialState.label, ID), filter(nullptr) {
+KalmanPredictor::KalmanPredictor(Detection &initialState, int ID)
+        : Predictor(initialState.namelabel, ID, initialState.label, initialState), filter(nullptr) {
     dlib::matrix<double, numStates, numStates> F; // System dynamics matrix
     dlib::matrix<double, numObservations, numStates> H; // Output matrix
     dlib::matrix<double, numStates, numStates> Q; // Process noise covariance
@@ -76,15 +76,18 @@ void KalmanPredictor::update() {
 
 void KalmanPredictor::update(const Detection &det) {
     Predictor::update(det);
+    this->currentBox = det.bb;
     filter->update(boundingBoxToMeas(det.bb));
 }
 
 // Getters
 
-Detection KalmanPredictor::getPredictedNextDetection() const {
-    return Detection(getLabel(), 1, stateToBoundingBox(filter->get_predicted_next_state()));
+Detection KalmanPredictor::getPredictedNextDetection() {
+    detection.updateBoundingBox(stateToBoundingBox(filter->get_predicted_next_state()));
+    return detection;
 }
 
 Tracking KalmanPredictor::getTracking() const {
-    return Tracking(getLabel(), getID(), stateToBoundingBox(filter->get_current_state()));
+    std::string name = objName.size() > 0 ? objName:(label);
+    return Tracking(getLabel(), getID(), stateToBoundingBox(filter->get_current_state()), name);
 }

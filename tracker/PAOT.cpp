@@ -1,9 +1,9 @@
 #include "PAOT.h"
 
 #include "Affinity.h"
-#include "predictor/kalman/KalmanPredictor.h"
+#include "KalmanPredictor.h"
 #include <dlib/optimization.h>
-
+const std::string currentPath = "../objImage/";
 // Methods
 
 std::vector<Tracking> PAOT::track(const std::vector<Detection> &detections, cv::Mat &frame,
@@ -13,90 +13,39 @@ std::vector<Tracking> PAOT::track(const std::vector<Detection> &detections, cv::
 
     // Filter detections on confidence
     std::vector<Detection> strongDetections;
+    std::vector<Detection> carStrongDetections;
     for (const auto &detection : detections) {
-        if (detection.confidence > detectionThreshold) {
+        if (detection.confidence > detectionThreshold && 0 == detection.label) {
             strongDetections.push_back(detection);
+        }
+        else if(detection.confidence > detectionThreshold && 2 == detection.label){
+            carStrongDetections.push_back(detection);
+//            std::cout << "car num:" << carStrongDetections.size() << std::endl;
         }
     }
     //std::cout << "predictors:" << predictors.size() << std::endl;
     Association association = associateDetectionsToPredictors(strongDetections, predictors,
-                                                              Affinity::expCost, affinityThreshold);
+                                                              Affinity::expAndFeaCost, affinityThreshold);
 
-    // Update matched predictors with assigned detections
+    Association carAssociation = associateDetectionsToPredictors(carStrongDetections, carPredictors,
+                                                                 Affinity::expAndFeaCost, carAffinityThreshold);
+//    std::cout << "unmatchedDetections size:" << carAssociation.unmatchedDetections.size() << std::endl;
 
-    for (const auto &match : association.matching) {
-        //std::cout << predictors.at(match.second)->getID();
-        predictors.at(match.second)->update(strongDetections.at(match.first));
-        //std::cout << " associate with " << predictors.at(match.second)->getID() << std::endl;
-    }
-
-    for (const auto p : association.unmatchedPredictors) {
-        //std::cout << "unmatchedPredictions:"  << predictors.at(p)->getID()
-                  //<< " predictDetection:" << predictors.at(p)->getPredictedNextDetection();
-        predictors.at(p)->update();
-        //std::cout << " predictNextDetection:" << predictors.at(p)->getPredictedNextDetection() << std::endl;
-    }
-
-    // Create and initialise new predictors for unmatched detections
-    for (const auto id : association.unmatchedDetections) {
-        auto predictor = std::make_shared<KalmanPredictor>(strongDetections.at(id), ++trackCount);
-        predictors.push_back(predictor);
-/*        std::cout << "new ID:" << predictor->getID()
-                  << " Hits:" << predictor->getHitStreak()
-                  << " detection" << strongDetections.at(id)
-                  << " predictNextDetection:" << predictor->getPredictedNextDetection() << std::endl;
-*/    }
-
-    // Remove predictors that have been inactive for too long
-    for(const auto & predict : predictors){
-        if(predict->getTimeSinceUpdate() < 1 && predict->getHitStreak() >= minHits && !predict->isSaveImage){
-            cv::Point2f tl = cv::Point2f(predict->currentBox.x1(), predict->currentBox.y1());
-            cv::Point2f br = cv::Point2f(predict->currentBox.x2(), predict->currentBox.y2());
-            tl.x = tl.x < 0 ? 0 : tl.x;
-            tl.y = tl.y < 0 ? 0 : tl.y;
-            br.x = br.x >= frame.cols ? frame.cols - 1 : br.x;
-            br.y = br.y >= frame.rows ? frame.rows - 1 : br.y;
-            cv::Rect roi = cv::Rect(tl, br);
-            std::cout << "roi:(" << roi.tl().x << "," << roi.tl().y << "), (" << roi.br().x << "," << roi.br().y << ")" << std::endl;
-            cv::Mat objImage = frame(roi).clone();
-            cv::resize(objImage, objImage, cv::Size(48, 128));
-            std::string imagePath = "/home/nvidia/lyl/QtProject/DetectAndTrack/objImage/" + std::to_string(predict->getID()) + ".jpg";
-            cv::imwrite(imagePath, objImage);
-            predict->imagePath = imagePath;
-            predict->isSaveImage = true;
-            std::cout << "success save object image:" << imagePath << std::endl;
-            request.push(predict);
-        }
-        else if(predict->getTimeSinceUpdate()>maxAge&&predict->isSaveImage){
-            /*std::string personID = cameraNum + "_" + std::to_string(predict->getID());
-            std::cout << "delete ID:" << personID << std::endl;
-            std::cout << "image:" << predict->imagePath << std::endl;
-            std::cout << "trace:" << predict->objTrace.size() << std::endl;*/
-            auto object = std::make_shared<ObjData>(predict);
-            upload.push_back(object);
-        }
-    }
-    predictors.erase(std::remove_if(
-            predictors.begin(), predictors.end(),
-            [this](const std::shared_ptr<Predictor> &predictor) {
-                return predictor->getTimeSinceUpdate() > maxAge;
-            }), predictors.end());
-
-    // Return trackings from active predictors
     std::vector<Tracking> trackings;
-    for (auto it = predictors.begin(); it != predictors.end(); ++it) {
-        if ((*it)->getTimeSinceUpdate() < 1 &&
-            ((*it)->getHitStreak() >= minHits || frameCount <= minHits)) {
-            trackings.push_back((*it)->getTracking());
-        }
-    }
+    updateAssociations(association, predictors, strongDetections,
+                       frame, trackCount, trackings, maxAge, minHits, upload, request);
+    updateAssociations(carAssociation, carPredictors, carStrongDetections,
+                       frame, carTrackCount, trackings, carMaxAge, carMinHits, upload, request);
+
+    std::cout << "predictors:" << predictors.size() << std::endl;
+    std::cout << "carPredictors:" << carPredictors.size() << std::endl;
     return trackings;
 }
 
 PAOT::Association PAOT::associateDetectionsToPredictors(
         const std::vector<Detection> &detections,
         const std::vector<std::shared_ptr<Predictor>> &predictors,
-        double (*affinityMeasure)(const BoundingBox &a, const BoundingBox &b),
+        double (*affinityMeasure)(const Detection &a, const Detection &b),
         double affinityThreshold) {
 
     const int DOUBLE_PRECISION = 100;
@@ -113,9 +62,9 @@ PAOT::Association PAOT::associateDetectionsToPredictors(
     dlib::matrix<int> cost(detections.size(), predictors.size());
     for (size_t row = 0; row < detections.size(); ++row) {
         for (size_t col = 0; col < predictors.size(); ++col) {
-            cost(row, col) = int(DOUBLE_PRECISION * affinityMeasure(
-                    detections.at(row).bb,
-                    predictors.at(col)->getPredictedNextDetection().bb));
+            printf("(%d, %d) ", row, col);
+            cost(row, col) = int(DOUBLE_PRECISION *
+                                 affinityMeasure(detections.at(row), predictors.at(col)->getPredictedNextDetection()));
         }
     }
 
@@ -129,6 +78,7 @@ PAOT::Association PAOT::associateDetectionsToPredictors(
     std::vector<long> assignment = dlib::max_cost_assignment(cost);
 
     // Filter out matches with low IoU, including those for indices from padding
+    printf("matches:\n");
     for (int d = 0; d < assignment.size(); ++d) {
         if (cost(d, assignment[d]) < affinityThreshold * DOUBLE_PRECISION) {
             if (d < detections.size()) {
@@ -139,7 +89,74 @@ PAOT::Association PAOT::associateDetectionsToPredictors(
             }
         } else {
             matches.push_back(std::pair<int, int>(d, assignment[d]));
+            printf("(%d, %d)", d, assignment[d]);
         }
     }
     return PAOT::Association{matches, unmatchedDetections, unmatchedPredictors};
+}
+
+void PAOT::updateAssociations(Association &association,
+                              std::vector<std::shared_ptr<Predictor> > &predictors,
+                              std::vector<Detection> &detections,
+                              cv::Mat &frame,
+                              int &track_count,
+                              std::vector<Tracking> &trackings,
+                              const int maxage,
+                              const int minhits,
+                              std::vector<std::shared_ptr<ObjData> > &upload,
+                              std::queue<std::shared_ptr<Predictor> > &request){
+    for(const auto &match : association.matching){
+        predictors.at(match.second)->update(detections.at(match.first));
+    }
+    for(const auto &p : association.unmatchedPredictors){
+        predictors.at(p)->update();
+    }
+    for(const auto &p : association.unmatchedDetections){
+        if(detections.at(p).bb.area()>100){
+            auto predict = std::make_shared<KalmanPredictor>(detections.at(p), ++track_count);
+            predictors.push_back(predict);
+        }
+    }
+    for(const auto predict : predictors){
+        if(predict->getTimeSinceUpdate() < 1 && predict->getHitStreak() >= minhits && !predict->isSaveImage){
+            /*cv::Point2f tl = cv::Point2f(predict->currentBox.x1(), predict->currentBox.y1());
+            cv::Point2f br = cv::Point2f(predict->currentBox.x2(), predict->currentBox.y2());
+            tl.x = tl.x < 0 ? 0 : tl.x;
+            tl.y = tl.y < 0 ? 0 : tl.y;
+            br.x = br.x >= frame.cols ? frame.cols - 1 : br.x;
+            br.y = br.y >= frame.rows ? frame.rows - 1 : br.y;
+            cv::Rect roi = cv::Rect(tl, br);
+            cv::Mat objImage = frame(roi).clone();*/
+            cv::Mat objImage = predict->detection.p_objImage->clone();
+            if(predict->getLabel() == std::string("person"))
+                cv::resize(objImage, objImage, cv::Size(48, 128));
+            else
+                cv::resize(objImage, objImage, cv::Size(128, 64));
+            std::string imagePath = currentPath + predict->getLabel() + "_" + std::to_string(predict->getID()) + ".jpg";
+            cv::imwrite(imagePath, objImage);
+            predict->imagePath = imagePath;
+            predict->isSaveImage = true;
+            std::cout << "success save object image:" << imagePath << std::endl;
+            if(predict->getLabel() == std::string("person"))
+                request.push(predict);
+        }
+        else if(predict->getTimeSinceUpdate()>maxage && predict->isSaveImage){
+            auto object = std::make_shared<ObjData>(predict);
+            upload.push_back(object);
+        }
+    }
+
+    for(auto itor = predictors.begin(); itor != predictors.end(); itor++){
+        if ((*itor)->getTimeSinceUpdate() > maxage){
+            itor = predictors.erase(itor);
+            itor--;
+        }
+    }
+
+    for (auto it = predictors.begin(); it != predictors.end(); ++it) {
+        if ((*it)->getTimeSinceUpdate() < 1 &&
+            ((*it)->getHitStreak() >= minhits || frameCount <= minhits)) {
+            trackings.push_back((*it)->getTracking());
+        }
+    }
 }

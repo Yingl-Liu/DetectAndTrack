@@ -4,7 +4,7 @@
 
 #include "../util/Detection.h"
 #include "../util/Tracking.h"
-#include "predictor/Predictor.h"
+#include "Predictor.h"
 #include "../util/ObjData.h"
 
 #include <opencv2/core.hpp>

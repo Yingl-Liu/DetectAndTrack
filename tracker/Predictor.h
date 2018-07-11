@@ -2,8 +2,8 @@
 #define CPP_PREDICTOR_H
 
 
-#include "../../util/Detection.h"
-#include "../../util/Tracking.h"
+#include "../util/Detection.h"
+#include "../util/Tracking.h"
 
 #include <dlib/matrix.h>
 
@@ -13,7 +13,7 @@ public:
     static constexpr int numObservations = 4; // [x, y, area, ratio]
 
 public:
-    Predictor(int label, int ID);
+    Predictor(std::string label, int ID, int classes, Detection &detection);
 
     virtual ~Predictor() = default;
 
@@ -39,7 +39,7 @@ public:
     /**
      * Returns the predicted next state as Detection.
      */
-    virtual Detection getPredictedNextDetection() const = 0;
+    virtual Detection getPredictedNextDetection() = 0;
 
     /**
      * Returns the current state as Tracking.
@@ -50,7 +50,7 @@ public:
 
     int getTimeSinceUpdate() const;
 
-    int getLabel() const;
+    std::string getLabel() const;
 
     int getID() const;
 
@@ -64,14 +64,37 @@ public:
      */
     static dlib::matrix<double, numObservations, 1> boundingBoxToMeas(const BoundingBox &bb);
 
-private:
-    int label;
+    /**
+     * Object struct data.
+     */
+    std::string label;//class "person" or "car"
+
+    std::string imagePath;
+
+    std::string objName;//this object name. "car" + "_" + "ID" or "camera id" + "_" + "db_id"
+
+    int classes;//number of class
+
+    int db_id = 0;//the id in database
+
+    std::vector<BoundingBox> objTrace;
+
+    Detection detection;
+
+    std::shared_ptr<cv::Mat> p_objImage;//target image
+
+    BoundingBox currentBox;
+
+    bool isSaveImage = false;
+
+protected:
+
     int ID;
     int timeSinceUpdate;
     int hitStreak;
 };
 
-std::ostream &operator<<(std::ostream &os, const Predictor &kp);
+//std::ostream &operator<<(std::ostream &os, const Predictor &kp);
 
 
 #endif //CPP_PREDICTOR_H

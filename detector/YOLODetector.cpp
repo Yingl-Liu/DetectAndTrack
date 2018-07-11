@@ -19,6 +19,8 @@ YOLODetector::YOLODetector(const std::string & dataFile,
     sized = letterbox_image(im, net->w, net->h);
     srand(2222222);
     nms = 0.45;
+    carLable.insert({{2, "car"}, {5, "bus"}, {7, "trunk"}});
+    detectROI = cv::Rect(cv::Point2i(int(0.05*w), int(0.13*h)), cv::Point2i((w - int(0.05*w)), (h - int(0.13*h))));
 }
 
 YOLODetector::~YOLODetector(){
@@ -28,6 +30,7 @@ YOLODetector::~YOLODetector(){
 
 std::vector<Detection> YOLODetector::detect(const cv::Mat &image){
     std::vector<Detection> detections;
+    double w, h, x, y;
     frame =new IplImage(image);
     ipl_into_image(frame, im);
     rgbgr_image(im);
@@ -39,13 +42,35 @@ std::vector<Detection> YOLODetector::detect(const cv::Mat &image){
     dets = get_network_boxes(net, width, height, thresh, hier_thresh, 0, 1, &nboxes);
     if (nms) do_nms_sort(dets, nboxes, totalclass, nms);
     for(int i = 0; i < nboxes; ++i){
-        //for(int j = 0; j < totalclass; ++j){
-            if (dets[i].prob[0] > thresh){
+        for(int j = 0; j < totalclass; ++j){
+            if (0 == j && dets[i].prob[j] > thresh){
                 box b = dets[i].bbox;
-                detections.push_back(Detection(0, dets[i].prob[0],
-                                               BoundingBox(b.x*width, b.y*height, b.w*width, b.h*height),
-                                               std::string(namelables[0])));
-            //}
+                x = b.x * width;
+                y = b.y * height;
+                w = b.w * width;// + 10;
+                h = b.h * height;// + 20;
+                BoundingBox bb = BoundingBox(x, y, w, h, image.cols, image.rows);
+                std::shared_ptr<cv::Mat> pimage = std::make_shared<cv::Mat>(image(bb.rect()));
+                //cv::Point2f center = cv::Point2f(x, y);
+                if((detectROI.contains(cv::Point2f(x, y)))&&((h / w)>1.4))
+                    detections.push_back(Detection(std::string("person"),
+                                                   dets[i].prob[j],
+                                                   bb,
+                                                   0, pimage));
+            }
+            else if((2 == j || 5 == j || 7 == j) && dets[i].prob[j] > thresh){
+                    box b = dets[i].bbox;
+                    x = b.x * width;
+                    y = b.y * height;
+                    w = b.w * width;
+                    h = b.h * height;
+                    BoundingBox bb = BoundingBox(x, y, w, h, image.cols, image.rows);
+                    std::shared_ptr<cv::Mat> pimage = std::make_shared<cv::Mat>(image(bb.rect()));
+                    if(w>0.3*width||h>0.2*height)
+                        detections.push_back(Detection(carLable[j], dets[i].prob[j],
+                                                   bb,
+                                                   2, pimage));
+            }
         }
     }
     free_detections(dets, nboxes);

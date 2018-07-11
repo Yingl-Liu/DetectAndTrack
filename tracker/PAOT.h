@@ -3,8 +3,8 @@
 
 
 #include "Tracker.h"
-#include "predictor/Predictor.h"
-#include "predictor/kalman/KalmanPredictor.h"
+#include "Predictor.h"
+#include "KalmanPredictor.h"
 
 #include <memory>
 #include <vector>
@@ -27,11 +27,16 @@ public:
 
 private:
     const int maxAge = 8; // Original: 1
-    const int minHits = 3; // Original: 3
+    const int minHits = 2; // Original: 3
+    const int carMaxAge = 3;
+    const int carMinHits = 1;
     const double detectionThreshold = 0.4;
     const double affinityThreshold = 0.1;
+    const double carAffinityThreshold = 0.001;
     std::vector<std::shared_ptr<Predictor>> predictors;
+    std::vector<std::shared_ptr<Predictor>> carPredictors;
     int trackCount = 0;
+    int carTrackCount = 0;
     int frameCount = 0;
 
     /**
@@ -40,8 +45,21 @@ private:
     static Association associateDetectionsToPredictors(
             const std::vector<Detection> &detections,
             const std::vector<std::shared_ptr<Predictor>> &predictors,
-            double (*affinityMeasure)(const BoundingBox &a, const BoundingBox &b),
+            double (*affinityMeasure)(const Detection &a, const Detection &b),
             double affinityThreshold);
+    /**
+     * Update matched predictors with assigned detections
+     */
+    void updateAssociations(Association &association,
+                            std::vector<std::shared_ptr<Predictor>> &predictors,
+                            std::vector<Detection> &detections,
+                            cv::Mat &frame,
+                            int &track_count,
+                            std::vector<Tracking> &trackings,
+                            const int maxage,
+                            const int minhits,
+                            std::vector<std::shared_ptr<ObjData> > &upload,
+                            std::queue<std::shared_ptr<Predictor> > &request);
 
     struct Association {
         std::vector<std::pair<int, int>> matching;

@@ -2,7 +2,7 @@
 #define CPP_KALMANPREDICTOR_H
 
 
-#include "../Predictor.h"
+#include "Predictor.h"
 
 #include <dlib/filtering.h>
 
@@ -11,7 +11,7 @@
 
 class KalmanPredictor : public Predictor {
 public:
-    KalmanPredictor(const Detection &initialState, int ID);
+    KalmanPredictor(Detection &initialState, int ID);
 
     KalmanPredictor(KalmanPredictor &&rhs);
 
@@ -30,7 +30,7 @@ public:
     /**
      * Returns the predicted next state as Detection.
      */
-    Detection getPredictedNextDetection() const override;
+    Detection getPredictedNextDetection() override;
 
     /**
      * Returns the current state as Tracking.

@@ -18,21 +18,35 @@ double Affinity::iou(const BoundingBox &a, const BoundingBox &b) {
     return intersection / uni;
 }
 
-double Affinity::linCost(const BoundingBox &a, const BoundingBox &b) {
-    double positionCost = std::sqrt(std::pow(a.cx - b.cx, 2) + std::pow(a.cy - b.cy, 2));
-    double shapeCost = std::sqrt(std::pow(a.width - b.width, 2) + std::pow(a.height - b.height, 2));
+double Affinity::expAndFeaCost(const Detection &a, const Detection &b) {
+    double positionWeight = 0.5;
+    double shapeWeight = 1.5;
+    double positionCost = std::exp(-positionWeight * (
+            std::pow((a.bb.cx - b.bb.cx) / a.bb.width, 2) +
+            std::pow((a.bb.cy - b.bb.cy) / a.bb.height, 2)));
+    double shapeCost = std::exp(-shapeWeight * (
+            std::abs(a.bb.width - b.bb.width) / (a.bb.width + b.bb.width) +
+            std::abs(a.bb.height - b.bb.height) / (a.bb.height + b.bb.height)));
+    double featureCost = CosDistance(a.feature, b.feature);
+    std::cout << "featureCost" << featureCost << std::endl;
     return positionCost * shapeCost;
 }
 
-double Affinity::expCost(const BoundingBox &a, const BoundingBox &b) {
+double Affinity::expCost(const Detection &a, const Detection &b) {
     // It is expected that a is detection and b is prediction
     double positionWeight = 0.5;
     double shapeWeight = 1.5;
     double positionCost = std::exp(-positionWeight * (
-            std::pow((a.cx - b.cx) / a.width, 2) +
-            std::pow((a.cy - b.cy) / a.height, 2)));
+            std::pow((a.bb.cx - b.bb.cx) / a.bb.width, 2) +
+            std::pow((a.bb.cy - b.bb.cy) / a.bb.height, 2)));
     double shapeCost = std::exp(-shapeWeight * (
-            std::abs(a.width - b.width) / (a.width + b.width) +
-            std::abs(a.height - b.height) / (a.height + b.height)));
+            std::abs(a.bb.width - b.bb.width) / (a.bb.width + b.bb.width) +
+            std::abs(a.bb.height - b.bb.height) / (a.bb.height + b.bb.height)));
     return positionCost * shapeCost;
+}
+
+double Affinity::CosDistance(const cv::Mat &feature1, const cv::Mat &feature2){
+    double innerProduct = feature1.dot(feature2);
+    double norm = sqrt(feature1.dot(feature1)*feature2.dot(feature2));
+    return innerProduct/norm;
 }

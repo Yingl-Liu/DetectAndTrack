@@ -2,10 +2,10 @@
 
 // Constructors
 
-Tracking::Tracking(int label, int ID, const BoundingBox &bb)
+Tracking::Tracking(std::string label, int ID, const BoundingBox &bb)
         : label(label), ID(ID), bb(bb) {}
 
-Tracking::Tracking(int label, int ID, const BoundingBox &bb, std::string trackingName)
+Tracking::Tracking(std::string label, int ID, const BoundingBox &bb, std::string trackingName)
         : label(label), ID(ID), bb(bb),trackingName(trackingName) {}
 
 Tracking::Tracking(const Tracking &rhs)
