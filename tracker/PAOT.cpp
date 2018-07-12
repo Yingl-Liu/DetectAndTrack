@@ -61,7 +61,7 @@ PAOT::Association PAOT::associateDetectionsToPredictors(
     dlib::matrix<int> cost(detections.size(), predictors.size());
     for (size_t row = 0; row < detections.size(); ++row) {
         for (size_t col = 0; col < predictors.size(); ++col) {
-            printf("(%d, %d) ", row, col);
+            printf("ID: %d (%d, %d) ",predictors.at(col)->getID(), row, col);
             cost(row, col) = int(DOUBLE_PRECISION *
                                  affinityMeasure(detections.at(row), predictors.at(col)->getPredictedNextDetection()));
         }
@@ -146,7 +146,7 @@ void PAOT::updateAssociations(Association &association,
     }
 
     for(auto itor = predictors.begin(); itor != predictors.end(); itor++){
-        if ((*itor)->getTimeSinceUpdate() > maxage){
+        if ((*itor)->getTimeSinceUpdate() > maxage || ((!(*itor)->isSaveImage) && (*itor)->getTimeSinceUpdate() > 0)){
             itor = predictors.erase(itor);
             itor--;
         }
