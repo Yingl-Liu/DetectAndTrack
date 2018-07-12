@@ -33,7 +33,7 @@ struct Detection {
     cv::MatND feature;
 
     int bins[3] = {4, 4, 1};//HSV bins
-    int batchs[2] = {1, 2};//x : 1;y 2
+    int batchs[2] = {1, 4};//x : 1;y 2
 
 private:
     void extractFeature();

@@ -36,7 +36,7 @@ std::vector<Tracking> PAOT::track(const std::vector<Detection> &detections, cv::
     updateAssociations(carAssociation, carPredictors, carStrongDetections,
                        frame, carTrackCount, trackings, carMaxAge, carMinHits, upload, request);
 
-    std::cout << "predictors:" << predictors.size() << std::endl;
+    std::cout << "\npredictors:" << predictors.size() << std::endl;
     std::cout << "carPredictors:" << carPredictors.size() << std::endl;
     return trackings;
 }
@@ -117,7 +117,7 @@ void PAOT::updateAssociations(Association &association,
         }
     }
     for(const auto predict : predictors){
-        if(predict->getTimeSinceUpdate() < 1 && predict->getHitStreak() >= minhits && !predict->isSaveImage){
+        if(predict->getTimeSinceUpdate() < 1 && predict->getHitStreak() > minhits && !predict->isSaveImage){
             /*cv::Point2f tl = cv::Point2f(predict->currentBox.x1(), predict->currentBox.y1());
             cv::Point2f br = cv::Point2f(predict->currentBox.x2(), predict->currentBox.y2());
             tl.x = tl.x < 0 ? 0 : tl.x;
