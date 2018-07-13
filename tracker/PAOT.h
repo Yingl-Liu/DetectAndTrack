@@ -27,7 +27,7 @@ public:
 
 private:
     const int maxAge = 8; // Original: 1
-    const int minHits = 2; // Original: 3
+    const int minHits = 3; // Original: 3
     const int carMaxAge = 3;
     const int carMinHits = 1;
     const double detectionThreshold = 0.4;
